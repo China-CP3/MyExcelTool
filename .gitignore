@@ -61,3 +61,4 @@ crashlytics-build.properties
 /MyExcelTool/Library
 /MyExcelTool/Logs
 /MyExcelTool/obj
+/MyExcelTool/Temp
