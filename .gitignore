@@ -58,3 +58,6 @@ sysinfo.txt
 # Crashlytics generated file
 crashlytics-build.properties
 
+/MyExcelTool/Library
+/MyExcelTool/Logs
+/MyExcelTool/obj
