@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -17,7 +18,7 @@ public class CreateExcelInfo
     private static string fieldClassPath = ExcelReaderManager.fieldClassPath;//生成的字段文件存放路径
     private static string dicClassPath = ExcelReaderManager.dicClassPath;//生成的字典文件存放路径
     private static string ExcelFilePath = ExcelReaderManager.ExcelFilePath;//excel文件存放路径
-    
+    private static Dictionary<string, string> sheetRepeatName = new Dictionary<string, string>();//key为表名，value为Excel文件名+表名 用来判断表名是否重复
     /// <summary>
     /// 读取Excel表中的数据  生成3个文件
     /// </summary>
@@ -35,15 +36,34 @@ public class CreateExcelInfo
             }
             using (FileStream fs = files[i].Open(FileMode.Open,FileAccess.Read))//读取第i个文件中所有表的数据 固定写法
             {
-                IExcelDataReader excelDataReader = ExcelReaderFactory.CreateOpenXmlReader(fs);
+                IExcelDataReader excelDataReader;
+                if (files[i].Extension == ".xlsx")
+                {
+                    excelDataReader = ExcelReaderFactory.CreateOpenXmlReader(fs);//读取.xlsx
+                }else
+                excelDataReader = ExcelReaderFactory.CreateBinaryReader(fs);//读取.xls
                 dataTable = excelDataReader.AsDataSet().Tables;
                 fs.Close();
             }
             for (int j = 0; j < dataTable.Count; j++)//该文件中有Count张表,每张表生成对应的3个文件
             {
+                string fileName = null;//Excel文件名
+                fileName = GetFileNameNoExtention(files[i]);
+                if (sheetRepeatName.ContainsKey(dataTable[j].TableName))//判断表名是否重复
+                {
+                    if (!(sheetRepeatName[dataTable[j].TableName] == fileName + dataTable[j].TableName))//当前处理的表名和文件名如果已经存在字典中  说明是修改旧表 而不是新增表
+                    {
+                        Debug.LogError("表名重复请修改!:" + dataTable[j].TableName + " 该重复表名位于Excel文件:" + fileName);
+                        continue;
+                    }
+                }
+                if(!sheetRepeatName.ContainsKey(dataTable[j].TableName))
+                {
+                    sheetRepeatName.Add(dataTable[j].TableName, fileName + dataTable[j].TableName);//把新增表的表名和文件名+表名 存进去 方便判断重复表名
+                }                
                 GenateBinaryFile(dataTable[j]);
                 GenateFieldFile(dataTable[j]);
-                GenateDicFilePath(dataTable[j]);
+                GenateDicFilePath(dataTable[j]);          
             }
         }
     }/// <summary>
@@ -117,7 +137,7 @@ public class CreateExcelInfo
     /// <summary>
     /// 生成Excel表对应的字典类
     /// </summary>
-    /// <param name="table"></param>
+    /// <param name="table"></param>    
     private static void GenateDicFilePath(DataTable table)
     {
         int keyColumn = GetkeyColumn(table);
@@ -152,5 +172,16 @@ public class CreateExcelInfo
             }
         }
         return 0;
+    }
+    private static string GetFileNameNoExtention(FileInfo file)
+    {
+        if (file.Extension.Length == 5)
+        {
+            return file.Name.Remove(file.Name.Length - 5);
+        }
+        else
+        {
+            return  file.Name.Remove(file.Name.Length - 4);
+        }
     }
 }

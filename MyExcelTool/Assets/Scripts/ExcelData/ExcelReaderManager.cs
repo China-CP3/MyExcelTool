@@ -34,33 +34,36 @@ public class ExcelReaderManager
     }
     public void InitDate()
     {
-        //if (!Directory.Exists(dicClassPath))
-        //{
-        //    Directory.CreateDirectory(dicClassPath);
-        //}
+        if (!Directory.Exists(dicClassPath))
+        {
+            Directory.CreateDirectory(dicClassPath);
+        }
 
-        //DirectoryInfo directory = new DirectoryInfo(dicClassPath);
-        //FileInfo[] files = directory.GetFiles();
-        //for (int i = 0; i < files.Length; i++)
-        //{
-        //    if(files[i].Extension==".cs")
-        //    {
-        //        string className = files[i].Name.Remove(files[i].Name.Length - 3);
-        //        Type  t = Type.GetType(className);
-
-        //    }         
-        //}
-        LoadTable<Sheet1, Sheet1fieldClass>();
+        DirectoryInfo directory = new DirectoryInfo(dicClassPath);
+        FileInfo[] files = directory.GetFiles();
+        string fileName;
+        for (int i = 0; i < files.Length; i++)
+        {
+            if (files[i].Extension == ".cs")
+            {
+                fileName = files[i].Name.Remove(files[i].Name.Length - 3);
+                Type dicClass = Type.GetType(fileName);
+                fileName += "fieldClass";
+                Type fieldClass = Type.GetType(fileName);
+                LoadTable(dicClass, fieldClass);
+            }
+        }
+        
     }
     /// <summary>
     /// 加载Excel表的2进制数据到字典中
     /// </summary>
     /// <typeparam name="dicClass">字典类</typeparam>
-    /// <typeparam name="FieldClass">字段类</typeparam>
-    private void LoadTable<dicClass,FieldClass>()
+    /// <typeparam name="fieldClass">字段类</typeparam>
+    private void LoadTable(Type dicClass, Type FieldClass)
     {
         //读取 excel表对应的2进制文件 来进行解析
-        using (FileStream fs=new FileStream(BinaryFile_Path+typeof(dicClass).Name+".CP3",FileMode.Open,FileAccess.Read))
+        using (FileStream fs=new FileStream(BinaryFile_Path+dicClass.Name+".CP3",FileMode.Open,FileAccess.Read))
         {
             byte[] bytes = new byte[fs.Length];
             fs.Read(bytes, 0, bytes.Length);
@@ -76,10 +79,10 @@ public class ExcelReaderManager
             string keyName = Encoding.UTF8.GetString(bytes,index, keyLength);//读取key本身
             index += keyLength;
 
-            Type fieldType = typeof(FieldClass);
+            Type fieldType = FieldClass;
             FieldInfo[] fieldInfos = fieldType.GetFields();//拿到字段类中的字段信息
 
-            Type dicType = typeof(dicClass);
+            Type dicType = dicClass;
             object dicObj = Activator.CreateInstance(dicType);//实例化字典类对象 
 
             for (int i = 0; i < count; i++)
@@ -117,7 +120,7 @@ public class ExcelReaderManager
                 object keyValue = fieldType.GetField(keyName).GetValue(fieldObj);
                 method.Invoke(dic, new object[] { keyValue, fieldObj });
             }
-            tableDic.Add(typeof(dicClass).Name,dicObj);
+            tableDic.Add(dicClass.Name,dicObj);
             fs.Close();
         }
     }
